@@ -8,8 +8,9 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use App\Models\User;
 use Carbon\Carbon;
+use App\Http\Controllers\Interface\AuthInterface;
 
-class AuthController extends Controller
+class AuthController extends Controller implements AuthInterface
 {
     public function register(Request $request)
     {
@@ -24,7 +25,10 @@ class AuthController extends Controller
             'password' => Hash::make('default_password'), 
         ]);
 
-        return response()->json(['message' => 'User registered successfully']);
+        return response()->json([
+            'status' => 'success',
+            'message' => 'User registered successfully'
+        ]);
     }
 
     public function login(Request $request)
@@ -35,13 +39,11 @@ class AuthController extends Controller
 
         $user = User::where('email', $request->email)->first();
 
-        // Generate otp
         $otp = rand(100000, 999999);
         $user->otp = $otp;
         $user->otp_expires_at = Carbon::now()->addMinutes(5); 
         $user->save();
 
-        // Send otp via email
         Mail::raw("Your OTP code is $otp", function ($message) use ($user) {
             $message->to($user->email)
                 ->subject('Your OTP Code');
@@ -64,8 +66,7 @@ class AuthController extends Controller
         }
 
         Auth::login($user);
-
-        // clear otp 
+        
         $user->otp = null;
         $user->otp_expires_at = null;
         $user->save();
